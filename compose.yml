@@ -1,0 +1,32 @@
+version: "3.4"
+
+services:
+  database:
+    image: postgres
+    platform: linux/amd64
+    ports:
+      - "5432:5432"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d RealEstateRadar -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    container_name: crawler_db
+    networks:
+      - crawler_network
+    environment:
+      - POSTGRES_PASSWORD=docker123
+      - POSTGRES_DB=RealEstateRadar
+      - PGDATA=/var/lib/postgresql/data
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+networks:
+  crawler_network:
+    driver: bridge
+
+volumes:
+  pgdata:
+    driver: local
