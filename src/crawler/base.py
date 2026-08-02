@@ -141,7 +141,7 @@ class BaseCrawler(ABC):
             # Aguarda um elemento que indica que o conteúdo dos anúncios carregou
             # Ajuste o seletor conforme o HTML real da OLX
             await page.wait_for_selector(
-                "section[class=olx-adcard]",
+                "a[data-testid=adcard-link]",
                 timeout=15_000,
             )
 

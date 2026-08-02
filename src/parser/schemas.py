@@ -31,7 +31,7 @@ class Imovel(BaseModel):
 
     id_externo: str = Field(..., description="ID único na fonte (OLX, ZAP, etc.)")
     fonte: str = Field(..., description="Identificador do crawler (ex: 'olx')")
-    url: HttpUrl
+    url: str
     titulo: str
     preco: Optional[Decimal] = None
     tipo: TipoImovel = TipoImovel.OUTROS

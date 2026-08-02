@@ -27,7 +27,7 @@ class TelegramAlertas:
             f"📐 {imovel.area_m2} m²  🛏 {imovel.quartos} quartos\n\n"
             f"[Ver anúncio]({imovel.url})"
         )
-        await self._enviar(texto)
+        # await self._enviar(texto)
 
     async def preco_alterado(self, imovel: ImovelORM) -> None:
         def fmt(v: Decimal | None) -> str:
@@ -46,7 +46,7 @@ class TelegramAlertas:
             f"{variacao}\n\n"
             f"[Ver anúncio]({imovel.url})"
         )
-        await self._enviar(texto)
+        # await self._enviar(texto)
 
     async def _enviar(self, texto: str) -> None:
         try:

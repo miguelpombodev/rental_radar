@@ -22,6 +22,7 @@ class OLXCrawler(BaseCrawler):
 
     def __init__(
         self,
+        pais: str = "brasil",
         estado: str = "sp",
         cidade: str = "sao-paulo",
         tipo: TipoImovel = TipoImovel.APARTAMENTO,
@@ -29,13 +30,14 @@ class OLXCrawler(BaseCrawler):
         paginas: int = 5,
     ) -> None:
         super().__init__()
+        self._country_initials = "br" if pais == "brasil" else "pt"
         self._estado = estado
         self._cidade = cidade
         self._tipo = tipo
         self._tipo_anuncio = tipo_anuncio
         self._paginas = paginas
         self._base_url = (
-            f"https://www.olx.com.br/imoveis/{tipo_anuncio.value}"
+            f"https://www.olx.com.{self._country_initials}/imoveis/{tipo_anuncio.value}"
             f"/{tipo.value}/estado-{estado}"
         )
 
@@ -50,7 +52,7 @@ class OLXCrawler(BaseCrawler):
 
         # OLX injeta os dados dos anúncios num <script> JSON — mais robusto que CSS
         # Fallback: seletores CSS caso o JSON não esteja presente
-        for card in soup.select("a[data-testid=adcard-link]"):
+        for card in soup.select("section.olx-adcard"):
             try:
                 imovel = self._extrair_card(card)
                 if imovel:
@@ -62,27 +64,26 @@ class OLXCrawler(BaseCrawler):
 
     def _extrair_card(self, card) -> Imovel | None:  # type: ignore[no-untyped-def]
         id_externo = card.get("data-lurker-detail", "")
-        link_tag = card.select_one("a[data-lurker-detail]")
+        link_tag = card.select_one("a[data-testid=adcard-link]")
         if not link_tag:
             return None
 
         url = link_tag.get("href", "")
-        titulo_tag = card.select_one("h2, .fnmrjs0")
+        titulo_tag = card.select_one("h2")
         titulo = titulo_tag.get_text(strip=True) if titulo_tag else "Sem título"
 
         preco_tag = card.select_one("[class*='price'], .fntzzx0")
         preco_raw = preco_tag.get_text(strip=True) if preco_tag else None
 
         # Extrai área, quartos, vagas de badges tipo "80 m² · 2 quartos · 1 vaga"
-        detalhes = card.get_text(" ", strip=True)
-        area = self._extrair_numero(detalhes, r"(\d+)\s*m²")
-        quartos = self._extrair_numero(detalhes, r"(\d+)\s*quarto")
-        banheiros = self._extrair_numero(detalhes, r"(\d+)\s*banheiro")
-        vagas = self._extrair_numero(detalhes, r"(\d+)\s*vaga")
+        area = card.select_one("[aria-label*='quadrados']").get_text(strip=True)
+        quartos = card.select_one("[aria-label*='quartos']").get_text(strip=True)
+        banheiros = card.select_one("[aria-label*='banheiros']").get_text(strip=True)
+        vagas = card.select_one("[aria-label*='vagas de garagem']").get_text(strip=True)
 
-        bairro_tag = card.select_one("[class*='location'], .fntzzx1")
+        bairro_tag = card.select_one("[class*='typo-caption']")
         bairro_raw = bairro_tag.get_text(strip=True) if bairro_tag else None
-        bairro, cidade = self._split_localizacao(bairro_raw)
+        cidade, bairro = self._split_localizacao(bairro_raw)
 
         return Imovel(
             id_externo=id_externo or url,
@@ -90,7 +91,7 @@ class OLXCrawler(BaseCrawler):
             url=url,  # type: ignore[arg-type]
             titulo=titulo,
             preco=preco_raw,
-            tipo=self._tipo,
+            tipo=self._parse_residence(titulo),
             tipo_anuncio=self._tipo_anuncio,
             area_m2=area,
             quartos=quartos,
@@ -100,6 +101,17 @@ class OLXCrawler(BaseCrawler):
             cidade=cidade or self._cidade,
             estado=self._estado.upper(),
         )
+
+    def _parse_residence(self, title: str) -> TipoImovel:
+        match title.lower():
+            case "casa":
+                TipoImovel.CASA
+            case "residencia":
+                TipoImovel.CASA
+            case "apartamento":
+                TipoImovel.APARTAMENTO
+            case _:
+                TipoImovel.OUTROS
 
     @staticmethod
     def _extrair_numero(texto: str, padrao: str) -> int | None:

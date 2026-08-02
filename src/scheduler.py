@@ -26,10 +26,10 @@ async def executar_coleta() -> None:
 
     async with (
         OLXCrawler(
-            estado="sp",
-            cidade="sao-paulo",
+            estado="rj",
+            cidade="rio-de-janeiro",
             tipo=TipoImovel.APARTAMENTO,
-            tipo_anuncio=TipoAnuncio.VENDA,
+            tipo_anuncio=TipoAnuncio.ALUGUEL,
             paginas=3,
         ) as crawler,
         get_session() as session,
@@ -47,6 +47,8 @@ async def executar_coleta() -> None:
             if mudou_preco:
                 preco_mudou += 1
                 await alertas.preco_alterado(orm)
+
+        await session.commit()
 
     logger.info(
         "Coleta finalizada. Novos: %d | Preços alterados: %d", novos, preco_mudou

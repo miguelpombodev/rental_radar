@@ -11,7 +11,7 @@ class ImovelORM(Base):
     __tablename__ = "imoveis"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    id_externo: Mapped[str] = mapped_column(String(120), nullable=False)
+    id_externo: Mapped[str] = mapped_column(String(500), nullable=False)
     fonte: Mapped[str] = mapped_column(String(30), nullable=False)
     url: Mapped[str] = mapped_column(String(512))
     titulo: Mapped[str] = mapped_column(String(300))
