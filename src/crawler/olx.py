@@ -50,7 +50,7 @@ class OLXCrawler(BaseCrawler):
 
         # OLX injeta os dados dos anúncios num <script> JSON — mais robusto que CSS
         # Fallback: seletores CSS caso o JSON não esteja presente
-        for card in soup.select("li[data-lurker-detail='list_id']"):
+        for card in soup.select("a[data-testid=adcard-link]"):
             try:
                 imovel = self._extrair_card(card)
                 if imovel:
