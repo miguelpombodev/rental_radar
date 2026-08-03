@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 
 from src.crawler.base import BaseCrawler
 from src.parser.schemas import Imovel, TipoAnuncio, TipoImovel
+from utils.urls import build_base_url
 
 
 class OLXCrawler(BaseCrawler):
@@ -18,11 +19,9 @@ class OLXCrawler(BaseCrawler):
     filtrando por estado, cidade e tipo.
     """
 
-    fonte = "olx"
-
     def __init__(
         self,
-        pais: str = "brasil",
+        pais: str = "brazil",
         estado: str = "sp",
         cidade: str = "sao-paulo",
         tipo: TipoImovel = TipoImovel.APARTAMENTO,
@@ -30,15 +29,14 @@ class OLXCrawler(BaseCrawler):
         paginas: int = 5,
     ) -> None:
         super().__init__()
-        self._country_initials = "br" if pais == "brasil" else "pt"
+        self._fonte = "olx"
         self._estado = estado
         self._cidade = cidade
         self._tipo = tipo
         self._tipo_anuncio = tipo_anuncio
         self._paginas = paginas
-        self._base_url = (
-            f"https://www.olx.com.{self._country_initials}/imoveis/{tipo_anuncio.value}"
-            f"/{tipo.value}/estado-{estado}"
+        self._base_url = build_base_url(
+            pais, self._tipo_anuncio, self._tipo, self._estado
         )
 
     async def _urls_para_coletar(self) -> AsyncIterator[str]:
@@ -75,19 +73,22 @@ class OLXCrawler(BaseCrawler):
         preco_tag = card.select_one("[class*='price'], .fntzzx0")
         preco_raw = preco_tag.get_text(strip=True) if preco_tag else None
 
+        if preco_raw == "" or None:
+            return None
+
         # Extrai área, quartos, vagas de badges tipo "80 m² · 2 quartos · 1 vaga"
         area = card.select_one("[aria-label*='quadrados']").get_text(strip=True)
         quartos = card.select_one("[aria-label*='quartos']").get_text(strip=True)
         banheiros = card.select_one("[aria-label*='banheiros']").get_text(strip=True)
         vagas = card.select_one("[aria-label*='vagas de garagem']").get_text(strip=True)
 
-        bairro_tag = card.select_one("[class*='typo-caption']")
-        bairro_raw = bairro_tag.get_text(strip=True) if bairro_tag else None
+        bairro_tag = card.select_one("[class*='olx-adcard__location']")
+        bairro_raw = bairro_tag.findChild().get_text(strip=True) if bairro_tag else None
         cidade, bairro = self._split_localizacao(bairro_raw)
 
         return Imovel(
             id_externo=id_externo or url,
-            fonte=self.fonte,
+            fonte=self._fonte,
             url=url,  # type: ignore[arg-type]
             titulo=titulo,
             preco=preco_raw,
@@ -103,15 +104,17 @@ class OLXCrawler(BaseCrawler):
         )
 
     def _parse_residence(self, title: str) -> TipoImovel:
-        match title.lower():
-            case "casa":
-                TipoImovel.CASA
-            case "residencia":
-                TipoImovel.CASA
-            case "apartamento":
-                TipoImovel.APARTAMENTO
+        match title:
+            case str() if "casa" in title.lower():
+                return TipoImovel.CASA
+            case str() if "residencia" in title.lower():
+                return TipoImovel.CASA
+            case str() if "apartamento" in title.lower():
+                return TipoImovel.APARTAMENTO
+            case str() if "cobertura" in title.lower():
+                return TipoImovel.APARTAMENTO
             case _:
-                TipoImovel.OUTROS
+                return TipoImovel.OUTROS
 
     @staticmethod
     def _extrair_numero(texto: str, padrao: str) -> int | None:

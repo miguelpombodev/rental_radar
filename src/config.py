@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from crawler.ideal import IdealistaCrawler
+from crawler.olx import OLXCrawler
 
 
 class Settings(BaseSettings):
@@ -17,6 +21,8 @@ class Settings(BaseSettings):
     3. Valores default definidos aqui
     """
 
+    crawlers: dict[str, Any] = {"olx": OLXCrawler, "idealist": IdealistaCrawler}
+
     model_config = SettingsConfigDict(
         env_file=Path(__file__).parent.parent / ".env",
         env_file_encoding="utf-8",
@@ -24,13 +30,11 @@ class Settings(BaseSettings):
         extra="ignore",  # ignora vars desconhecidas no .env
     )
 
-    # ── Banco de dados ─────────────────────────────────────────────────────────
     database_url: str = Field(
         default="sqlite+aiosqlite:///./imoveis.db",
         description="SQLAlchemy async URL. Ex: postgresql+asyncpg://user:pass@host/db",
     )
 
-    # ── Telegram ───────────────────────────────────────────────────────────────
     telegram_token: SecretStr = Field(
         default=SecretStr(""),
         description="Token do bot obtido via @BotFather",
@@ -40,7 +44,6 @@ class Settings(BaseSettings):
         description="Chat ID para onde os alertas serão enviados",
     )
 
-    # ── Crawler ────────────────────────────────────────────────────────────────
     crawler_intervalo_minutos: int = Field(
         default=30,
         ge=5,
@@ -64,14 +67,12 @@ class Settings(BaseSettings):
         description="Pausa entre batches de requisições (respeito ao servidor)",
     )
 
-    # ── App ────────────────────────────────────────────────────────────────────
     debug: bool = Field(
         default=False,
         description="Ativa SQL echo e logs verbosos",
     )
     log_level: str = Field(default="INFO")
 
-    # ── Validações ─────────────────────────────────────────────────────────────
     @field_validator("telegram_token", mode="before")
     @classmethod
     def token_nao_vazio_se_alertas(cls, v: object) -> object:
@@ -88,7 +89,6 @@ class Settings(BaseSettings):
             raise ValueError(f"log_level deve ser um de {validos}")
         return upper
 
-    # ── Helpers ────────────────────────────────────────────────────────────────
     @property
     def alertas_ativos(self) -> bool:
         """True se token e chat_id foram configurados."""

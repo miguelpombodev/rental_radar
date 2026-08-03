@@ -21,39 +21,36 @@ logger = logging.getLogger(__name__)
 
 
 class BaseCrawler(ABC):
-    fonte: str
-
-    _HEADERS = {
-        "User-Agent": (
-            "Mozilla/5.0 (X11; Linux x86_64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/124.0.0.0 Safari/537.36"
-        ),
-        "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-        "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": '"Linux"',
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
-        "Sec-Fetch-User": "?1",
-        "Upgrade-Insecure-Requests": "1",
-        "Accept": (
-            "text/html,application/xhtml+xml,application/xml;"
-            "q=0.9,image/avif,image/webp,image/apng,*/*;"
-            "q=0.8,application/signed-exchange;v=b3;q=0.7"
-        ),
-        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Cache-Control": "max-age=0",
-    }
-
-    _CONCORRENCIA = 3  # reduzido — menos paralelo = menos suspeito
-    _DELAY_MIN = 1.5
-    _DELAY_MAX = 4.0
-
     def __init__(self) -> None:
+        self._fonte: str
+        self._CONCORRENCIA = 3  # reduzido — menos paralelo = menos suspeito
+        self._DELAY_MIN = 1.5
+        self._DELAY_MAX = 4.0
         self._semaphore = asyncio.Semaphore(self._CONCORRENCIA)
         self._client: httpx.AsyncClient | None = None
+        self._HEADERS = {
+            "User-Agent": (
+                "Mozilla/5.0 (X11; Linux x86_64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"Linux"',
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Upgrade-Insecure-Requests": "1",
+            "Accept": (
+                "text/html,application/xhtml+xml,application/xml;"
+                "q=0.9,image/avif,image/webp,image/apng,*/*;"
+                "q=0.8,application/signed-exchange;v=b3;q=0.7"
+            ),
+            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Cache-Control": "max-age=0",
+        }
 
     async def __aenter__(self) -> "BaseCrawler":
         # Inicia o Playwright uma vez e reutiliza entre todas as URLs

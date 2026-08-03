@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 class TipoImovel(StrEnum):
     APARTAMENTO = "apartamento"
     CASA = "casa"
+    COBERTURA = "cobertura"
     TERRENO = "terreno"
     COMERCIAL = "comercial"
     OUTROS = "outros"

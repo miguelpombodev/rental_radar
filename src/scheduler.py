@@ -6,7 +6,7 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from rich.logging import RichHandler
 
-from src.alerts.telegram import TelegramAlertas
+from src.alerts.telegram import TelegramAlerts
 from src.crawler.olx import OLXCrawler
 from src.parser.schemas import TipoAnuncio, TipoImovel
 from src.storage.database import get_session
@@ -20,9 +20,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def executar_coleta() -> None:
+async def execute_collecting() -> None:
     logger.info("Iniciando coleta...")
-    alertas = TelegramAlertas()
+    alerts = TelegramAlerts()
 
     async with (
         OLXCrawler(
@@ -35,39 +35,42 @@ async def executar_coleta() -> None:
         get_session() as session,
     ):
         repo = ImovelRepository(session)
-        novos = preco_mudou = 0
+        new = price_changed = 0
 
         async for imovel in crawler.coletar():
-            orm, is_novo, mudou_preco = await repo.upsert(imovel)
+            orm, is_new, new_price = await repo.upsert(imovel)
 
-            if is_novo:
-                novos += 1
-                await alertas.novo_imovel(orm)
+            if is_new:
+                new += 1
+                await alerts.novo_imovel(orm)
 
-            if mudou_preco:
-                preco_mudou += 1
-                await alertas.preco_alterado(orm)
+            if new_price:
+                price_changed += 1
+                await alerts.preco_alterado(orm)
 
         await session.commit()
+        logger.info("Real Estates registered in database")
 
     logger.info(
-        "Coleta finalizada. Novos: %d | Preços alterados: %d", novos, preco_mudou
+        "Collecting finished. New states: %d | Prices has changed: %d",
+        new,
+        price_changed,
     )
 
 
-async def main() -> None:  # <-- agora é async
+async def main() -> None:
     scheduler = AsyncIOScheduler()
-    await executar_coleta()
+    await execute_collecting()
 
     scheduler.add_job(
-        executar_coleta,
+        execute_collecting,
         trigger="interval",
         minutes=30,
-        id="coleta_imoveis",
+        id="real_estates_collector",
         max_instances=1,
         misfire_grace_time=60,
     )
-    scheduler.start()  # chamado dentro do loop — funciona
+    scheduler.start()
     logger.info("Scheduler iniciado. Ctrl+C para parar.")
 
     try:

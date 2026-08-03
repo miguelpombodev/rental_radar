@@ -12,7 +12,7 @@ from src.storage.models import ImovelORM
 logger = logging.getLogger(__name__)
 
 
-class TelegramAlertas:
+class TelegramAlerts:
     def __init__(self) -> None:
         self._bot = Bot(token=settings.telegram_token_str)
         self._chat_id = settings.telegram_chat_id
